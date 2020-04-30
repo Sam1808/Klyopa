@@ -1,10 +1,7 @@
 import random
 import speedtest
-from fpdf import FPDF, HTMLMixin # pdf creator
 from terminaltables import AsciiTable, DoubleTable, SingleTable
 
-class HTML2PDF(FPDF, HTMLMixin): # html to pdf
-    pass
 
 def get_speedtest_results(test_servers):
     results = []
@@ -68,14 +65,14 @@ def build_table(title, table_data):
     table_instance.justify_columns[2] = 'right'
     print(table_instance.table)
 
-def buid_html_table(table):
-    html_data = '<table width="100%" border="1" align="center">'
+def buid_html_table(table): #need review
+    html_data = '<table width="60%" border="1" align="center">'
     for data in table:
         html_data = html_data+'<tr>'
         for detail in data:
-            html_data = html_data + '<th width="15%"><font size="8">'+str(detail)+'</font></th>'
+            html_data = html_data + '<td width="10%"><font size="6">'+str(detail)+'</font></td>'
         html_data = html_data + '</tr>'
-    return html_data+'</table>'
+    return html_data+'</table><br><br>'
 
 if __name__ == '__main__':
 
@@ -113,7 +110,8 @@ www.speedtest.net           :.----.     .--
         Provider: {user_config["client"]["isp"]}
         Country: {your_country}
         ''')
-    ratio_of_global_tests = 1
+
+    ratio_of_global_tests = 2
     general_results = {}
 
     best_test_server = s.get_best_server()
@@ -167,8 +165,8 @@ www.speedtest.net           :.----.     .--
         build_table(result,table_data)
         html_code = f'{html_code} {buid_html_table(table_data)}'
         print()
-    pdf = HTML2PDF()
-    pdf.add_page()
-    pdf.write_html(html_code)
 
-    pdf.output('report.pdf')
+    with open('report.html', 'w') as html_file:
+        html_file.write(html_code)
+
+    input('Please check report.html file. Press [Enter] to exit')
