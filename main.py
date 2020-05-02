@@ -1,6 +1,6 @@
 import random
 import speedtest
-from terminaltables import AsciiTable, DoubleTable, SingleTable
+from terminaltables import SingleTable
 
 
 def get_speedtest_results(test_servers):
@@ -65,7 +65,7 @@ def build_table(title, table_data):
     table_instance.justify_columns[2] = 'right'
     print(table_instance.table)
 
-def buid_html_table(table): #need review
+def buid_html_table(table): #need to review
     html_data = '<table width="60%" border="1" align="center">'
     for data in table:
         html_data = html_data+'<tr>'
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     print(f'''
                                            -.  --                       
         -= KLYOPA =-                     -      :                      
-                                         -        :.                    
+        ver.1.0 alfa                     -        :.                    
         Internet speed test.             -         :                    
                                         .          .-                   
              :.   -:.                  -.          .:                   
@@ -154,13 +154,13 @@ www.speedtest.net           :.----.     .--
         Results:
         ''')
 
-    mib_factor = 1048576 #bytes to MiB factor
+    mbit_factor = 0.000001 #bits to Mbit factor
     html_code =''
     for result in general_results:
-        table_data = [['Country', 'Location', 'Provider', 'Ping ms', 'Upload MiB', 'Download MiB']]
+        table_data = [['Country', 'Location', 'Provider', 'Ping ms', 'Upload Mbps', 'Download Mbps']]
         result_tests = general_results[result]
         for test in result_tests:
-            results_table = [test['server']['country'],test['server']['name'],test['server']['sponsor'],test['ping'],round(test['upload']/mib_factor, 2),round(test['download']/mib_factor, 2)]
+            results_table = [test['server']['country'],test['server']['name'],test['server']['sponsor'],test['ping'],round(test['upload']*mbit_factor, 2),round(test['download']*mbit_factor, 2)]
             table_data.append(results_table)
         build_table(result,table_data)
         html_code = f'{html_code} {buid_html_table(table_data)}'
