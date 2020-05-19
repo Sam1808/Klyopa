@@ -2,6 +2,7 @@ import argparse
 import random
 import speedtest
 import requests
+from datetime import datetime
 from requests.exceptions import ConnectionError
 from ping3 import ping
 from terminaltables import SingleTable
@@ -111,6 +112,7 @@ if __name__ == '__main__':
     node = args.node
     packet_size = args.packet_size
     number_of_tests = args.number_of_tests
+    start_test_time = datetime.now()
 
     if not args.server_mode:
         # --------start TESTS -------
@@ -136,7 +138,7 @@ if __name__ == '__main__':
     print(f'''
                                            -.  --                       
         -= KLYOPA =-                     -      :                      
-        ver.1.1 alfa                     -        :.                    
+        ver.1.2 alfa                     -        :.                    
         Internet speed test.             -         :                    
                                         .          .-                   
              :.   -:.                  -.          .:                   
@@ -256,8 +258,9 @@ www.speedtest.net           :.----.     .--
         Results:
         ''')
 
+    html_code = '' # report.html code
+
     mbit_factor = 0.000001 #bits to Mbit factor
-    html_code =''
     if icmp_table:
         html_code = f'{html_code} {buid_html_table("Icmp tests", icmp_table)}'
     for result in general_results:
@@ -268,7 +271,13 @@ www.speedtest.net           :.----.     .--
             table_data.append(results_table)
         build_table(result,table_data)
         html_code = f'{html_code} {buid_html_table(result,table_data)}'
-        print()
+    end_test_time = datetime.now()
+    print()
+
+    html_code = f'''{html_code}
+                <h3> Start time: {str(start_test_time)}</h3>                
+                <h3> End time: {str(end_test_time)}</h3>
+                <h3> Test duration: {str(end_test_time-start_test_time)}</h3>'''
 
     with open('report.html', 'w') as html_file:
         html_file.write(html_code)
