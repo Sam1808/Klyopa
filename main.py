@@ -10,13 +10,19 @@ from statistics import mean, median
 
 def get_speedtest_results(test_servers):
     results = []
-    for server in test_servers:
-        s = speedtest.Speedtest()
-        s.get_servers([server])
-        s.download()
-        s.upload(pre_allocate=False)
-        results.append(s.results.dict())
-        print(f'Server ID: {server} - test OK')
+    for number,server in enumerate(test_servers):
+        try:
+            s = speedtest.Speedtest()
+            s.get_servers([server])
+            s.download()
+            s.upload(pre_allocate=False)
+            results.append(s.results.dict())
+        except ConfigRetrievalError:
+            print('Something wrong with URL... Skip this test')
+        except NoMatchedServers:
+            print('Something wrong with Internet... Skip this test')
+        print(render_progressbar(len(test_servers),number+1),end='\r', flush=True)
+
     return results
 
 def get_closest_servers_results():
@@ -69,13 +75,14 @@ def build_table(title, table_data):
     print(table_instance.table)
 
 def buid_html_table(result,table): #need to review
-    html_data = '<table width="60%" border="1" align="center"><tr><td>'+str(result)+'</td></tr>'
+    html_data = f'<table width="80%" border="1" align="center"><caption><b> Report type:{str(result)} </b></caption>'
     for data in table:
-        html_data = html_data+'<tr>'
+        html_data += '<tr>'
         for detail in data:
-            html_data = html_data + '<td>'+str(detail)+'</td>'
-        html_data = html_data + '</tr>'
-    return html_data+'</table><br><br>'
+            html_data += '<td>'+str(detail)+'</td>'
+        html_data += '</tr>'
+    html_data += '</table><br><br>'
+    return html_data
 
 def render_progressbar(total, iteration, prefix='', suffix='', length=30, fill='█', zfill='░'):
   iteration = min(total, iteration)
@@ -132,6 +139,7 @@ if __name__ == '__main__':
     s = speedtest.Speedtest()
     user_config = s.get_config()
     your_ip = user_config["client"]["ip"]
+    your_provider = user_config["client"]["isp"]
     your_country = user_config["client"]["country"]
 
 
@@ -160,7 +168,7 @@ www.speedtest.net           :.----.     .--
                                                                         
               
         IP: {your_ip}
-        Provider: {user_config["client"]["isp"]}
+        Provider: {your_provider}
         Country: {your_country}
         ''')
 
@@ -212,8 +220,6 @@ www.speedtest.net           :.----.     .--
         build_table('Icmp tests', icmp_table)
 
 
-
-
     ratio_of_global_tests = args.ratio_of_global_tests
     general_results = {}
 
@@ -230,12 +236,14 @@ www.speedtest.net           :.----.     .--
 
     print(f'''Test complete.
         
-        Get tests with closest servers.
+        Get tests with closest servers. Progress:
+
         ''')
     general_results['closest_servers'] = get_closest_servers_results()
 
     print(f'''
-        Get {ratio_of_global_tests*3} tests with local servers.
+        Get {ratio_of_global_tests*3} tests with local servers. Progress:
+
         ''')
 
     local_servers_catalog, world_wide_servers_catalog = get_servers_catalogs(your_country)
@@ -246,7 +254,8 @@ www.speedtest.net           :.----.     .--
     general_results['far_from_local_servers'] = get_speedtest_results(local_servers_catalog[-ratio_of_global_tests:])
 
     print(f'''
-        Get {ratio_of_global_tests*3} tests with word wide servers.
+        Get {ratio_of_global_tests*3} tests with word wide servers. Progress:
+
         ''')
     general_results['closest_word_wide_servers'] = get_speedtest_results(world_wide_servers_catalog[:ratio_of_global_tests])
     ww_servers_middle_index = int(len(world_wide_servers_catalog) / 2)
@@ -254,32 +263,70 @@ www.speedtest.net           :.----.     .--
         world_wide_servers_catalog[ww_servers_middle_index:ww_servers_middle_index+ratio_of_global_tests])
     general_results['far_from_world_wide_servers'] = get_speedtest_results(world_wide_servers_catalog[-ratio_of_global_tests:])
 
-    print(f'''
-        Results:
-        ''')
+    print('''
+        Results:''')
 
-    html_code = '' # report.html code
+    html_code = '''
+        <html>
+        <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title>KLYOPA</title>
+        </head>
+        <body>
+        <center><h2>KLYOPA - connection tests </h2></center><br>
+        ''' #report file html code
 
     mbit_factor = 0.000001 #bits to Mbit factor
+
     if icmp_table:
         html_code = f'{html_code} {buid_html_table("Icmp tests", icmp_table)}'
+
+    upload_results = []
+    download_results = []
+
     for result in general_results:
         table_data = [['Country', 'Location', 'Provider', 'Ping ms', 'Upload Mbps', 'Download Mbps']]
         result_tests = general_results[result]
         for test in result_tests:
-            results_table = [test['server']['country'],test['server']['name'],test['server']['sponsor'],test['ping'],round(test['upload']*mbit_factor, 2),round(test['download']*mbit_factor, 2)]
+            upload_speed = round(test['upload']*mbit_factor, 2)
+            download_speed = round(test['download']*mbit_factor, 2)
+            results_table = [test['server']['country'],test['server']['name'],test['server']['sponsor'],test['ping'],upload_speed,download_speed]
             table_data.append(results_table)
+            upload_results.append(upload_speed)
+            download_results.append(download_speed)
         build_table(result,table_data)
         html_code = f'{html_code} {buid_html_table(result,table_data)}'
+    
     end_test_time = datetime.now()
-    print()
 
-    html_code = f'''{html_code}
-                <h3> Start time: {str(start_test_time)}</h3>                
-                <h3> End time: {str(end_test_time)}</h3>
-                <h3> Test duration: {str(end_test_time-start_test_time)}</h3>'''
+    overall_results_consolidated = {}
+    overall_results_consolidated['Start time'] = str(start_test_time)[:-7]
+    overall_results_consolidated['End time'] = str(end_test_time)[:-7]
+    overall_results_consolidated['Test duration'] = str(end_test_time-start_test_time)[:-7]
+    overall_results_consolidated['Your IP'] = your_ip
+    overall_results_consolidated['Your Provider'] = your_provider
+    overall_results_consolidated['Your Country'] = your_country
+    overall_results_consolidated['Upload speed max value (Mbps)'] = round(max(upload_results), 2)
+    overall_results_consolidated['Download speed max value (Mbps)'] = round(max(download_results), 2)
+    overall_results_consolidated['Upload speed average value (Mbps)'] = round(mean(upload_results), 2)
+    overall_results_consolidated['Download speed average value (Mbps)'] = round(mean(download_results), 2)
+    overall_results_consolidated['Upload speed median value (Mbps)'] = round(median(upload_results), 2)
+    overall_results_consolidated['Download speed median value (Mbps)'] = round(median(download_results), 2)
+    overall_results_consolidated['Upload speed min value (Mbps)'] = round(min(upload_results), 2)
+    overall_results_consolidated['Download speed min value (Mbps)'] = round(min(download_results), 2)
 
-    with open('report.html', 'w') as html_file:
+    overall_results_table = [['Specification', 'Results']]
+    for key in overall_results_consolidated:
+        overall_results_table.append([key, overall_results_consolidated[key]])
+    build_table('Оverall results', overall_results_table)
+
+    html_code += buid_html_table('Оverall results', overall_results_table)
+
+    html_end_code = '</body></html>'
+    html_code += html_end_code
+
+    with open(f'report_{overall_results_consolidated["End time"]}.html', 'w') as html_file:
         html_file.write(html_code)
 
+    print()
     input('Please check report.html file. Press [Enter] to exit')
