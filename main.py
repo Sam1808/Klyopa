@@ -17,9 +17,9 @@ def get_speedtest_results(test_servers):
             s.download()
             s.upload(pre_allocate=False)
             results.append(s.results.dict())
-        except ConfigRetrievalError:
+        except speedtest.ConfigRetrievalError:
             print('Something wrong with URL... Skip this test')
-        except NoMatchedServers:
+        except speedtest.NoMatchedServers:
             print('Something wrong with Internet... Skip this test')
         print(render_progressbar(len(test_servers),number+1),end='\r', flush=True)
 
@@ -52,7 +52,8 @@ def get_closest_servers_results():
             random.randint(0, len(one_country_test_servers_ids) - 1)]
             closest_test_servers.append(one_country_test_server_id)
 
-    print(f'''Total tests: {len(closest_test_servers)}''')
+    print(f'''Total tests: {len(closest_test_servers)}
+    ''')
 
     return get_speedtest_results(closest_test_servers)
 
@@ -69,7 +70,6 @@ def get_servers_catalogs(your_country):
     return test_servers_local,test_servers_world_wide
 
 def build_table(title, table_data):
-
     table_instance = SingleTable(table_data, title)
     table_instance.justify_columns[2] = 'right'
     print(table_instance.table)
@@ -134,7 +134,7 @@ if __name__ == '__main__':
             ''')
             exit()
 
-    # --------end TESTS -------
+        # --------end TESTS -------
 
     s = speedtest.Speedtest()
     user_config = s.get_config()
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     print(f'''
                                            -.  --                       
         -= KLYOPA =-                     -      :                      
-        ver.1.2 alfa                     -        :.                    
+        ver.1.3 alfa                     -        :.                    
         Internet speed test.             -         :                    
                                         .          .-                   
              :.   -:.                  -.          .:                   
@@ -195,9 +195,9 @@ www.speedtest.net           :.----.     .--
         # --End tests
 
         print(f'Run icmp tests with {node}. Progress:')
+        print()
         icmp_results, lost_packets = make_icmp_test(node, number_of_tests, packet_size)
-        print('''
-        ''')
+
         percent_lost = round(lost_packets * 100 / number_of_tests, 2)
 
         icmp_results_consolidated = {}
@@ -237,13 +237,13 @@ www.speedtest.net           :.----.     .--
     print(f'''Test complete.
         
         Get tests with closest servers. Progress:
-
         ''')
+
     general_results['closest_servers'] = get_closest_servers_results()
 
     print(f'''
-        Get {ratio_of_global_tests*3} tests with local servers. Progress:
 
+        Get {ratio_of_global_tests*3} tests with local servers (three stages). Progress:
         ''')
 
     local_servers_catalog, world_wide_servers_catalog = get_servers_catalogs(your_country)
@@ -254,9 +254,10 @@ www.speedtest.net           :.----.     .--
     general_results['far_from_local_servers'] = get_speedtest_results(local_servers_catalog[-ratio_of_global_tests:])
 
     print(f'''
-        Get {ratio_of_global_tests*3} tests with word wide servers. Progress:
 
+        Get {ratio_of_global_tests*3} tests with word wide servers (three stages). Progress:
         ''')
+
     general_results['closest_word_wide_servers'] = get_speedtest_results(world_wide_servers_catalog[:ratio_of_global_tests])
     ww_servers_middle_index = int(len(world_wide_servers_catalog) / 2)
     general_results['middle_word_wide_servers'] = get_speedtest_results(
@@ -264,7 +265,9 @@ www.speedtest.net           :.----.     .--
     general_results['far_from_world_wide_servers'] = get_speedtest_results(world_wide_servers_catalog[-ratio_of_global_tests:])
 
     print('''
-        Results:''')
+    
+        Results:
+        ''')
 
     html_code = '''
         <html>
