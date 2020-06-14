@@ -111,15 +111,24 @@ if __name__ == '__main__':
     parser.add_argument('--node', help='Provider node for icmp test (root rights)')
     parser.add_argument('--number_of_tests', type=int, default=10000, help='Number of icmp reqests (default: 10000)')
     parser.add_argument('--packet_size', type=int, default=996, help='Set ICMP packet payload (default: 996)')
-    parser.add_argument('--server_mode', help='Speedtest(c) mini server mode')
+    parser.add_argument('--server_mode', help='Reserved for future server mode')
     parser.add_argument('--ratio_of_global_tests', type=int, default=3, help='Global test ratio (default ratio 3, total 9 tests for each type)')
 
     args = parser.parse_args()
 
     node = args.node
-    packet_size = args.packet_size
-    number_of_tests = args.number_of_tests
+    packet_size = abs(args.packet_size)
+    number_of_tests = abs(args.number_of_tests)
     start_test_time = datetime.now()
+    html_code = '''
+        <html>
+        <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title>KLYOPA</title>
+        </head>
+        <body>
+        <center><h2>KLYOPA - connection tests </h2></center><br>
+        ''' #report file html code
 
     if not args.server_mode:
         # --------start TESTS -------
@@ -146,7 +155,7 @@ if __name__ == '__main__':
     print(f'''
                                            -.  --                       
         -= KLYOPA =-                     -      :                      
-        ver.1.3 alfa                     -        :.                    
+        ver.1.4 alfa                     -        :.                    
         Internet speed test.             -         :                    
                                         .          .-                   
              :.   -:.                  -.          .:                   
@@ -176,8 +185,12 @@ www.speedtest.net           :.----.     .--
 
         # --Start tests
 
-        if packet_size > 996:
-            print(f'There is no way to use packet size more than 996 bytes by design. Please try again.')
+        if packet_size > 996 or packet_size == 0:
+            print(f'There is no way to use packet size equal zero or more than 996 bytes by design. Please try again.')
+            exit()
+
+        if number_of_tests == 0 or number_of_tests > 10001:
+            print(f'There is no way to use number of tests equal zero or more than 10000 by design. Please try again.')
             exit()
 
         try:
@@ -189,8 +202,6 @@ www.speedtest.net           :.----.     .--
         if not resolve:
             print(f'Cannot resolve {node}. Please check provider node and try again.')
             exit()
-
-
 
         # --End tests
 
@@ -218,9 +229,15 @@ www.speedtest.net           :.----.     .--
         for key in icmp_results_consolidated:
             icmp_table.append([key, icmp_results_consolidated[key]])
         build_table('Icmp tests', icmp_table)
+        html_code = f'{html_code} {buid_html_table("Icmp tests", icmp_table)}'
 
 
-    ratio_of_global_tests = args.ratio_of_global_tests
+    ratio_of_global_tests = abs(args.ratio_of_global_tests)
+    if ratio_of_global_tests == 0 or ratio_of_global_tests > 10:
+        ratio_of_global_tests = 1
+        print('''
+        Ratio of global tests cannot be zero or more than ten (for what?).
+        The value was reset to 1.''')
     general_results = {}
 
     best_test_server = s.get_best_server()
@@ -247,10 +264,14 @@ www.speedtest.net           :.----.     .--
         ''')
 
     local_servers_catalog, world_wide_servers_catalog = get_servers_catalogs(your_country)
-    general_results['closest_local_servers'] = get_speedtest_results(local_servers_catalog[:ratio_of_global_tests])
+
+    general_results['closest_local_servers'] = get_speedtest_results(
+        local_servers_catalog[:ratio_of_global_tests]
+    )
     local_servers_middle_index = int(len(local_servers_catalog) / 2)
     general_results['middle_local_servers'] = get_speedtest_results(
-        local_servers_catalog[local_servers_middle_index:local_servers_middle_index+ratio_of_global_tests])
+        local_servers_catalog[local_servers_middle_index:local_servers_middle_index+ratio_of_global_tests]
+    )
     general_results['far_from_local_servers'] = get_speedtest_results(local_servers_catalog[-ratio_of_global_tests:])
 
     print(f'''
@@ -258,31 +279,23 @@ www.speedtest.net           :.----.     .--
         Get {ratio_of_global_tests*3} tests with word wide servers (three stages). Progress:
         ''')
 
-    general_results['closest_word_wide_servers'] = get_speedtest_results(world_wide_servers_catalog[:ratio_of_global_tests])
+    general_results['closest_word_wide_servers'] = get_speedtest_results(
+        world_wide_servers_catalog[:ratio_of_global_tests]
+    )
     ww_servers_middle_index = int(len(world_wide_servers_catalog) / 2)
     general_results['middle_word_wide_servers'] = get_speedtest_results(
-        world_wide_servers_catalog[ww_servers_middle_index:ww_servers_middle_index+ratio_of_global_tests])
-    general_results['far_from_world_wide_servers'] = get_speedtest_results(world_wide_servers_catalog[-ratio_of_global_tests:])
+        world_wide_servers_catalog[ww_servers_middle_index:ww_servers_middle_index+ratio_of_global_tests]
+    )
+    general_results['far_from_world_wide_servers'] = get_speedtest_results(
+        world_wide_servers_catalog[-ratio_of_global_tests:]
+    )
 
     print('''
     
         Results:
         ''')
 
-    html_code = '''
-        <html>
-        <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <title>KLYOPA</title>
-        </head>
-        <body>
-        <center><h2>KLYOPA - connection tests </h2></center><br>
-        ''' #report file html code
-
     mbit_factor = 0.000001 #bits to Mbit factor
-
-    if icmp_table:
-        html_code = f'{html_code} {buid_html_table("Icmp tests", icmp_table)}'
 
     upload_results = []
     download_results = []
@@ -293,7 +306,14 @@ www.speedtest.net           :.----.     .--
         for test in result_tests:
             upload_speed = round(test['upload']*mbit_factor, 2)
             download_speed = round(test['download']*mbit_factor, 2)
-            results_table = [test['server']['country'],test['server']['name'],test['server']['sponsor'],test['ping'],upload_speed,download_speed]
+            results_table = [
+                test['server']['country'],
+                test['server']['name'],
+                test['server']['sponsor'],
+                test['ping'],
+                upload_speed,
+                download_speed,
+            ]
             table_data.append(results_table)
             upload_results.append(upload_speed)
             download_results.append(download_speed)
@@ -303,8 +323,8 @@ www.speedtest.net           :.----.     .--
     end_test_time = datetime.now()
 
     overall_results_consolidated = {}
-    overall_results_consolidated['Start time'] = str(start_test_time)[:-7]
-    overall_results_consolidated['End time'] = str(end_test_time)[:-7]
+    overall_results_consolidated['Start time'] = str(start_test_time)[:-10].replace(':','.')
+    overall_results_consolidated['End time'] = str(end_test_time)[:-10].replace(':','.')
     overall_results_consolidated['Test duration'] = str(end_test_time-start_test_time)[:-7]
     overall_results_consolidated['Your IP'] = your_ip
     overall_results_consolidated['Your Provider'] = your_provider
@@ -321,14 +341,14 @@ www.speedtest.net           :.----.     .--
     overall_results_table = [['Specification', 'Results']]
     for key in overall_results_consolidated:
         overall_results_table.append([key, overall_results_consolidated[key]])
-    build_table('Оverall results', overall_results_table)
+    build_table('Overall results', overall_results_table)
 
     html_code += buid_html_table('Оverall results', overall_results_table)
 
     html_end_code = '</body></html>'
     html_code += html_end_code
 
-    with open(f'report_{overall_results_consolidated["End time"]}.html', 'w') as html_file:
+    with open(f'report_{overall_results_consolidated["End time"]}.html', 'w',encoding='utf-8') as html_file:
         html_file.write(html_code)
 
     print()
