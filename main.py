@@ -1,16 +1,17 @@
 import argparse
 import random
-import speedtest
 import requests
+import speedtest
 from datetime import datetime
 from requests.exceptions import ConnectionError
 from ping3 import ping
 from terminaltables import SingleTable
 from statistics import mean, median
 
+
 def get_speedtest_results(test_servers):
     results = []
-    for number,server in enumerate(test_servers):
+    for number, server in enumerate(test_servers):
         try:
             s = speedtest.Speedtest()
             s.get_servers([server])
@@ -21,9 +22,13 @@ def get_speedtest_results(test_servers):
             print('Something wrong with URL... Skip this test')
         except speedtest.NoMatchedServers:
             print('Something wrong with Internet... Skip this test')
-        print(render_progressbar(len(test_servers),number+1),end='\r', flush=True)
+        print(
+            render_progressbar(len(test_servers), number+1),
+            end='\r',
+            flush=True)
 
     return results
+
 
 def get_closest_servers_results():
 
@@ -49,13 +54,14 @@ def get_closest_servers_results():
         existing_servers = len(one_country_test_servers_ids) >= 1
         if existing_servers:
             one_country_test_server_id = one_country_test_servers_ids[
-            random.randint(0, len(one_country_test_servers_ids) - 1)]
+                random.randint(0, len(one_country_test_servers_ids) - 1)]
             closest_test_servers.append(one_country_test_server_id)
 
     print(f'''Total tests: {len(closest_test_servers)}
     ''')
 
     return get_speedtest_results(closest_test_servers)
+
 
 def get_servers_catalogs(your_country):
     all_servers_raw = s.get_servers()
@@ -67,14 +73,16 @@ def get_servers_catalogs(your_country):
             test_servers_local.append(server[0]['id'])
         else:
             test_servers_world_wide.append(server[0]['id'])
-    return test_servers_local,test_servers_world_wide
+    return test_servers_local, test_servers_world_wide
+
 
 def build_table(title, table_data):
     table_instance = SingleTable(table_data, title)
     table_instance.justify_columns[2] = 'right'
     print(table_instance.table)
 
-def buid_html_table(result,table): #need to review
+
+def buid_html_table(result, table):  # need to review
     html_data = f'<table width="80%" border="1" align="center"><caption><b> Report type:{str(result)} </b></caption>'
     for data in table:
         html_data += '<tr>'
@@ -84,26 +92,31 @@ def buid_html_table(result,table): #need to review
     html_data += '</table><br><br>'
     return html_data
 
+
 def render_progressbar(total, iteration, prefix='', suffix='', length=30, fill='█', zfill='░'):
-  iteration = min(total, iteration)
-  percent = "{0:.1f}"
-  percent = percent.format(100 * (iteration / float(total)))
-  filled_length = int(length * iteration // total)
-  pbar = fill * filled_length + zfill * (length - filled_length)
-  return '{0} |{1}| {2}% {3}'.format(prefix, pbar, percent, suffix)
+    iteration = min(total, iteration)
+    percent = "{0:.1f}"
+    percent = percent.format(100 * (iteration / float(total)))
+    filled_length = int(length * iteration // total)
+    pbar = fill * filled_length + zfill * (length - filled_length)
+    return '{0} |{1}| {2}% {3}'.format(prefix, pbar, percent, suffix)
 
 
 def make_icmp_test(node, number_of_tests, packet_size):
     icmp_results = []
     lost_packets = 0
     for number in range(0, number_of_tests):
-        print(render_progressbar(number_of_tests,number+1),end='\r', flush=True)
+        print(
+            render_progressbar(number_of_tests, number+1),
+            end='\r',
+            flush=True)
         icmp_test = ping(node, unit='ms', size=packet_size)
         if not icmp_test:
             lost_packets += 1
             continue
         icmp_results.append(icmp_test)
     return icmp_results, lost_packets
+
 
 if __name__ == '__main__':
 
@@ -128,7 +141,7 @@ if __name__ == '__main__':
         </head>
         <body>
         <center><h2>KLYOPA - connection tests </h2></center><br>
-        ''' #report file html code
+        '''  # report file html code
 
     if not args.server_mode:
         # --------start TESTS -------
@@ -137,7 +150,7 @@ if __name__ == '__main__':
             response = requests.get('http://google.com', allow_redirects=False)
             response.raise_for_status()
         except ConnectionError:
-            print(f'''
+            print('''
             Cannot find google.com.
             Connection Error: Please check your Internet connection (include DNS) and try again.
             ''')
@@ -151,11 +164,10 @@ if __name__ == '__main__':
     your_provider = user_config["client"]["isp"]
     your_country = user_config["client"]["country"]
 
-
     print(f'''
                                            -.  --                       
         -= KLYOPA =-                     -      :                      
-        ver.1.4 alfa                     -        :.                    
+        ver.1.5 alfa                     -        :.                    
         Internet speed test.             -         :                    
                                         .          .-                   
              :.   -:.                  -.          .:                   
@@ -174,8 +186,8 @@ Service provided by      .-.      ..      ..::. .-
    OOKLA                  .--     .:..... -..    -                      
 www.speedtest.net           :.----.     .--                             
                            -.     .-:::-.                               
-                                                                        
-              
+
+
         IP: {your_ip}
         Provider: {your_provider}
         Country: {your_country}
@@ -186,11 +198,11 @@ www.speedtest.net           :.----.     .--
         # --Start tests
 
         if packet_size > 996 or packet_size == 0:
-            print(f'There is no way to use packet size equal zero or more than 996 bytes by design. Please try again.')
+            print('There is no way to use packet size equal zero or more than 996 bytes by design. Please try again.')
             exit()
 
         if number_of_tests == 0 or number_of_tests > 10001:
-            print(f'There is no way to use number of tests equal zero or more than 10000 by design. Please try again.')
+            print('There is no way to use number of tests equal zero or more than 10000 by design. Please try again.')
             exit()
 
         try:
@@ -211,26 +223,25 @@ www.speedtest.net           :.----.     .--
 
         percent_lost = round(lost_packets * 100 / number_of_tests, 2)
 
-        icmp_results_consolidated = {}
-        icmp_results_consolidated['Provider node'] = node
-        icmp_results_consolidated['Packet size (bytes)'] = packet_size
-        icmp_results_consolidated['Total packets send'] = number_of_tests
-        icmp_results_consolidated['Packets are received'] = len(icmp_results)
-        icmp_results_consolidated['Packets are received (%)'] = 100 - percent_lost
-        icmp_results_consolidated['Packets are lost'] = lost_packets
-        icmp_results_consolidated['Packets are lost (%)'] = percent_lost
-        icmp_results_consolidated['Max value (ms)'] = round(max(icmp_results), 2)
-        icmp_results_consolidated['Average value (ms)'] = round(mean(icmp_results), 2)
-        icmp_results_consolidated['Median value (ms)'] = round(median(icmp_results), 2)
-        icmp_results_consolidated['Min value (ms)'] = round(min(icmp_results), 2)
-        icmp_results_consolidated['Jitter (ms)'] = round(max(icmp_results) - min(icmp_results), 2)
+        icmp_results_consolidated = {
+            'Provider node': node,
+            'Packet size (bytes)': packet_size,
+            'Total packets send': number_of_tests,
+            'Packets are received': len(icmp_results),
+            'Packets are received (%)': 100 - percent_lost,
+            'Packets are lost': lost_packets,
+            'Packets are lost (%)': percent_lost,
+            'Max value (ms)': round(max(icmp_results), 2),
+            'Average value (ms)': round(mean(icmp_results), 2),
+            'Median value (ms)': round(median(icmp_results), 2),
+            'Min value (ms)': round(min(icmp_results), 2),
+            'Jitter (ms)': round(max(icmp_results) - min(icmp_results), 2)}
 
         icmp_table = [['Specification', 'Results']]
         for key in icmp_results_consolidated:
             icmp_table.append([key, icmp_results_consolidated[key]])
         build_table('Icmp tests', icmp_table)
         html_code = f'{html_code} {buid_html_table("Icmp tests", icmp_table)}'
-
 
     ratio_of_global_tests = abs(args.ratio_of_global_tests)
     if ratio_of_global_tests == 0 or ratio_of_global_tests > 10:
@@ -251,8 +262,8 @@ www.speedtest.net           :.----.     .--
     s.download()
     general_results['best_server'] = [s.results.dict()]
 
-    print(f'''Test complete.
-        
+    print('''Test complete.
+
         Get tests with closest servers. Progress:
         ''')
 
@@ -291,11 +302,11 @@ www.speedtest.net           :.----.     .--
     )
 
     print('''
-    
+
         Results:
         ''')
 
-    mbit_factor = 0.000001 #bits to Mbit factor
+    mbit_factor = 0.000001  # bits to Mbit factor
 
     upload_results = []
     download_results = []
@@ -317,26 +328,26 @@ www.speedtest.net           :.----.     .--
             table_data.append(results_table)
             upload_results.append(upload_speed)
             download_results.append(download_speed)
-        build_table(result,table_data)
+        build_table(result, table_data)
         html_code = f'{html_code} {buid_html_table(result,table_data)}'
-    
+
     end_test_time = datetime.now()
 
-    overall_results_consolidated = {}
-    overall_results_consolidated['Start time'] = str(start_test_time)[:-10].replace(':','.')
-    overall_results_consolidated['End time'] = str(end_test_time)[:-10].replace(':','.')
-    overall_results_consolidated['Test duration'] = str(end_test_time-start_test_time)[:-7]
-    overall_results_consolidated['Your IP'] = your_ip
-    overall_results_consolidated['Your Provider'] = your_provider
-    overall_results_consolidated['Your Country'] = your_country
-    overall_results_consolidated['Upload speed max value (Mbps)'] = round(max(upload_results), 2)
-    overall_results_consolidated['Download speed max value (Mbps)'] = round(max(download_results), 2)
-    overall_results_consolidated['Upload speed average value (Mbps)'] = round(mean(upload_results), 2)
-    overall_results_consolidated['Download speed average value (Mbps)'] = round(mean(download_results), 2)
-    overall_results_consolidated['Upload speed median value (Mbps)'] = round(median(upload_results), 2)
-    overall_results_consolidated['Download speed median value (Mbps)'] = round(median(download_results), 2)
-    overall_results_consolidated['Upload speed min value (Mbps)'] = round(min(upload_results), 2)
-    overall_results_consolidated['Download speed min value (Mbps)'] = round(min(download_results), 2)
+    overall_results_consolidated = {
+        'Start time': str(start_test_time)[:-10].replace(':', '.'),
+        'End time': str(end_test_time)[:-10].replace(':', '.'),
+        'Test duration': str(end_test_time-start_test_time)[:-7],
+        'Your IP': your_ip,
+        'Your Provider': your_provider,
+        'Your Country': your_country,
+        'Upload speed max value (Mbps)': round(max(upload_results), 2),
+        'Download speed max value (Mbps)': round(max(download_results), 2),
+        'Upload speed average value (Mbps)': round(mean(upload_results), 2),
+        'Download speed average value (Mbps)': round(mean(download_results), 2),
+        'Upload speed median value (Mbps)': round(median(upload_results), 2),
+        'Download speed median value (Mbps)': round(median(download_results), 2),
+        'Upload speed min value (Mbps)': round(min(upload_results), 2),
+        'Download speed min value (Mbps)': round(min(download_results), 2)}
 
     overall_results_table = [['Specification', 'Results']]
     for key in overall_results_consolidated:
@@ -348,7 +359,7 @@ www.speedtest.net           :.----.     .--
     html_end_code = '</body></html>'
     html_code += html_end_code
 
-    with open(f'report_{overall_results_consolidated["End time"]}.html', 'w',encoding='utf-8') as html_file:
+    with open(f'report_{overall_results_consolidated["End time"]}.html', 'w', encoding='utf-8') as html_file:
         html_file.write(html_code)
 
     print()
